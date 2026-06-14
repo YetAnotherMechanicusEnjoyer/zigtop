@@ -29,14 +29,16 @@ fn run(init: std.process.Init, app: *vxfw.App) !void {
     const ram_usage = try proc.readRamUsage(init);
 
     model.* = .{
-        .cpu_usage = cpu_usage,
-        .ram_usage = ram_usage,
+        .cpu_usage = std.atomic.Value(f32).init(cpu_usage),
+        .ram_usage = std.atomic.Value(f32).init(ram_usage),
         .button = .{
             .label = "Refresh",
             .onClick = onClick,
             .userdata = model,
         },
         .init = init,
+        .thread = try std.Thread.spawn(.{}, Model.refreshLoop, .{model}),
+        .ctx = null,
     };
 
     try app.run(model.widget(), .{});
@@ -45,7 +47,10 @@ fn run(init: std.process.Init, app: *vxfw.App) !void {
 fn onClick(maybe_ptr: ?*anyopaque, ctx: *vxfw.EventContext) anyerror!void {
     const ptr = maybe_ptr orelse return;
     const self: *Model = @ptrCast(@alignCast(ptr));
-    self.cpu_usage = try proc.readCpuUsage(self.init);
-    self.ram_usage = try proc.readRamUsage(self.init);
+    const cpu = try proc.readCpuUsage(self.init);
+    const ram = try proc.readRamUsage(self.init);
+
+    self.cpu_usage.store(cpu, .seq_cst);
+    self.ram_usage.store(ram, .seq_cst);
     return ctx.consumeAndRedraw();
 }
