@@ -2,12 +2,14 @@ const std = @import("std");
 const vaxis = @import("vaxis");
 const vxfw = vaxis.vxfw;
 
+const proc = @import("proc.zig");
+
 const Model = @This();
 
-count: u32 = 0,
 cpu_usage: f32 = 0.0,
 ram_usage: f32 = 0.0,
 button: vxfw.Button,
+init: std.process.Init,
 
 pub fn widget(self: *Model) vxfw.Widget {
     return .{
@@ -25,6 +27,11 @@ fn typeErasedEventHandler(ptr: *anyopaque, ctx: *vxfw.EventContext, event: vxfw.
             if (key.matches('q', .{ .ctrl = false })) {
                 ctx.quit = true;
                 return;
+            }
+            if (key.matches('r', .{ .ctrl = false })) {
+                self.cpu_usage = try proc.readCpuUsage(self.init);
+                self.ram_usage = try proc.readRamUsage(self.init);
+                return ctx.consumeAndRedraw();
             }
         },
         .focus_in => return ctx.requestFocus(self.button.widget()),

@@ -32,10 +32,11 @@ fn run(init: std.process.Init, app: *vxfw.App) !void {
         .cpu_usage = cpu_usage,
         .ram_usage = ram_usage,
         .button = .{
-            .label = "This is a button",
+            .label = "Refresh",
             .onClick = onClick,
             .userdata = model,
         },
+        .init = init,
     };
 
     try app.run(model.widget(), .{});
@@ -44,6 +45,7 @@ fn run(init: std.process.Init, app: *vxfw.App) !void {
 fn onClick(maybe_ptr: ?*anyopaque, ctx: *vxfw.EventContext) anyerror!void {
     const ptr = maybe_ptr orelse return;
     const self: *Model = @ptrCast(@alignCast(ptr));
-    _ = self;
+    self.cpu_usage = try proc.readCpuUsage(self.init);
+    self.ram_usage = try proc.readRamUsage(self.init);
     return ctx.consumeAndRedraw();
 }
